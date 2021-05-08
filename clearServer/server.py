@@ -137,14 +137,11 @@ class File:
         return result
 
     def from_segment_data(self, data_inc):
-        print("размер иконки:", len(data_inc))
         segs_inc = pars_segments(data_inc)
-        print(len(segs_inc))
         for seg in segs_inc:
             if seg.name == "data":
                 self.data = seg.data
             elif seg.name == "name":
-                print("Было имя")
                 self.name = seg.data.decode('utf-8')
         return self
 
@@ -191,12 +188,10 @@ class Contact:
         if login == '' or password == '':
             return None
         if os.path.isdir("contacts/" + login):
-            print("loging")
             f = open("contacts/" + login + "/info.json", "rt")
             dict_info = json.loads(f.read())
             f.close()
             if password == dict_info["password"]:
-                print(dict_info['password'], password)
                 return self.by_name(login)
             else:
                 return None
@@ -245,8 +240,11 @@ class Contact:
 
 
 class Addition:
-    def __init__(self, type_add=None, value=File(None, None)):
-        self.value = value
+    def __init__(self, type_add=None, value=None):
+        if value is None:
+            self.value = File(None, None)
+        else:
+            self.value = value
         self.type_add = type_add
 
 
@@ -390,9 +388,8 @@ def secure_send(conn, data, key, iv):
     hash_code = hashlib.md5(encrypted_bytes)
     print("hashing time:" + str(time.time() - start))
     all_data_segments = Segment("hash", hash_code.digest(), False).getBinary() + Segment("result", encrypted_bytes,
-                                                         True).getBinary()
+                                                                                         True).getBinary()
     conn.send(all_data_segments)
-    # print("DONE!")
 
 
 def login_request(seg_data):
@@ -404,7 +401,6 @@ def login_request(seg_data):
             login = seg.data.decode('utf-8')
         elif seg.name == "password":
             password = seg.data.decode('utf-8')
-    print(Contact().from_login(login, password))
     return Contact().from_login(login, password)
 
 
@@ -424,10 +420,8 @@ def perform_update_user(seg_data):
             password = seg.data.decode('utf-8')
         elif seg.name == "iconMin":
             min_icon = File().from_segment_data(seg.data)
-            print(min_icon.name)
         elif seg.name == "iconMax":
             max_icon = File().from_segment_data(seg.data)
-            print(max_icon.name)
     cnt = Contact().from_login(login, password)
     if cnt is None:
         return False
@@ -452,7 +446,6 @@ def perform_news_request(seg_data):
             login = seg.data.decode('utf-8')
         elif seg.name == "password":
             password = seg.data.decode('utf-8')
-    print("send request from ", login, password)
     if Contact().from_login(login, password) is not None:
         message = Message().from_segment_data(news_data)
         if message.contact_name != login:
@@ -517,11 +510,11 @@ def work_with_input_data(conn, data):
     perform_secure_command(conn, outputResult, AES_key, iv)
 
 
-sock = socket.socket()
-port = 6228
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+port = 6555
 print("port =", port)
 sock.bind(('', port))
-
 while True:
     sock.listen(1)
     conn, addr = sock.accept()
@@ -551,6 +544,7 @@ while True:
                     conn.shutdown(socket.SHUT_RDWR)
                     conn.close()
                     check = True
+
             if len(data) > 128:
                 conn.shutdown(socket.SHUT_RDWR)
                 conn.close()
