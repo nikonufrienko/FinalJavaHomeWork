@@ -5,7 +5,6 @@ import customFrame.*;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.Timer;
-import javax.swing.border.BevelBorder;
 import javax.swing.event.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -521,7 +520,7 @@ class ContentElement extends JPanel {
 }
 
 /**
- * Это пришлось вырезать из программы, т.к. реалиазовать полностью это я не успел.
+ * Это пришлось вырезать из программы, т.к. реализовать полностью это я не успел.
  */
 class MsgPanel extends JPanel {
     List<String> messages = new ArrayList<>();
