@@ -31,7 +31,6 @@ print(public_key)
 
 
 def prepare(value):
-    # x x x x - длинна
     length_val = len(value)
     arr = []
     for i in range(4):
