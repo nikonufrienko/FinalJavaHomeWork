@@ -95,7 +95,8 @@ public class Main {
     }
 
     public static void showInfo(String text) {
-        info = new JDialog();
+        info = new JDialog(frameGlobalLink.frame);
+        info.setAlwaysOnTop(true);
         info.setUndecorated(true);
         info.setBackground(new Color(90, 90, 104));
         info.setLocation(MouseInfo.getPointerInfo().getLocation());
@@ -104,7 +105,6 @@ public class Main {
         Dimension dim = textArea.getPreferredSize();
         textArea.setHighlighter(null);
         textArea.setEnabled(false);
-
         info.setSize(dim.width * 2, dim.height * 2);
         textArea.setBackground(new Color(0, 0, 0, 0));
         textArea.setBorder(BorderFactory.createLineBorder(new Color(0, 0, 0, 0)));
@@ -214,6 +214,18 @@ public class Main {
         }) {
             @Override
             void changeContent(Component comp) {
+                Component[] components = this.getComponents();
+                for (Component component : components) {
+                    if (component instanceof Container) {
+                        ((Container) component).removeNotify();
+                    }
+                    if (component instanceof NewsPanel) {
+                        System.out.println("removing news!");
+                        ((NewsPanel) component).removeLinks();
+                    }
+
+                }
+                System.gc();
                 super.changeContent(comp);
                 f.frame.pack();
             }
@@ -363,6 +375,7 @@ class ScrollablePane extends JScrollPane implements Layoutable {
             final int defaultSpeed = 4;
             final int increment = 7;
             int currSpeed = defaultSpeed;
+
             @Override
             public void mouseWheelMoved(MouseWheelEvent e) {
                 int tp = (int) (e.getPreciseWheelRotation() * currSpeed + getViewport().getViewPosition().y);
@@ -886,16 +899,24 @@ class SelectionPanel extends CPanel {
 
 class NewsPanel extends CPanel {
     private List<CPanel> stack = new ArrayList<>();
-    private final CPanel nwsPnl;
-    List<Message> news;
+    private CPanel nwsPnl;
     ScrollablePane body;
-    private CustomFrame.CustomScroller scrollerLink;
-    private SocketOfClientNode coreLink;
-    private MessageGetter msgGetter;
-    private int curInd = 0;
     Boolean inLoading = false;
     int counter = 0;
     boolean isEnded = false;
+
+    // to free memory
+
+    /**
+     * Этим методом я пофиксил java heap space
+     **/
+    void removeLinks() {
+        body.setViewport(null);
+        body = null;
+        nwsPnl = null;
+        stack = null;
+
+    }
 
     public void startUpdatingNews() {
         if (!isEnded && !inLoading && Main.core != null && Main.core.isActive && stack.size() > 0) {
@@ -904,7 +925,7 @@ class NewsPanel extends CPanel {
             new Thread(() -> {
                 Message newNews = Main.core.getNews(finalCounter);
                 SwingUtilities.invokeLater(() -> {
-                    if (newNews != null) {
+                    if (newNews != null && nwsPnl != null) {
                         if (newNews.isNewsEnded) {
                             Main.notifyUser("Новости закончились :(");
                             isEnded = true;
@@ -991,7 +1012,6 @@ class NewsPanel extends CPanel {
 
     public NewsPanel(CustomFrame.CustomScroller scroller) {
         super();
-        scrollerLink = scroller;
         this.setLayout(new BorderLayout());
         nwsPnl = new CPanel() {
             @Override
@@ -1015,7 +1035,7 @@ class NewsPanel extends CPanel {
         body = new ScrollablePane(nwsPnl, scroller);
         body.getViewport().addChangeListener(e -> {
             SwingUtilities.invokeLater(() -> {
-                if (stack.size() <= 2 || body.getViewport().getViewPosition().y + body.getViewport().getHeight() > stack.get(stack.size() - 3).getY()) {
+                if (nwsPnl!= null && stack.size() <= 2 || body.getViewport().getViewPosition().y + body.getViewport().getHeight() > stack.get(stack.size() - 3).getY()) {
                     startUpdatingNews();
                 }
             });

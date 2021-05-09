@@ -27,7 +27,7 @@ public class SocketOfClientNode {
     public boolean isActive = false;
     static final byte LAST_MARKER = "l".getBytes(StandardCharsets.UTF_8)[0];
     static final byte NAME_BOUND = "=".getBytes(StandardCharsets.UTF_8)[0];
-    static final int TIMEOUT = 30000; //Лимит времени чтения данных сегмента из сокета или из потока
+    static final int TIMEOUT = 300000; //Лимит времени чтения данных сегмента из сокета или из потока
 
 
     public SocketOfClientNode(String ip, int port) throws IOException {
@@ -327,21 +327,23 @@ public class SocketOfClientNode {
         return res.toByteArray();
     }
 
-    public Message getNews(int index) {
+    synchronized public Message getNews(int index) {
         try {
             ByteArrayOutputStream request = new ByteArrayOutputStream();
             sendSegment(request, new Segment("newsRequestByNumber", String.valueOf(index).getBytes(StandardCharsets.UTF_8), true));
             initConnection();
             secureTransmit(request.toByteArray());
             byte[] result = readSecureData(socket.getInputStream());
-            closeConnectionAnyWay();
+            closeConnectionAnyway();
+            if (result == null)
+                return null;
             ByteArrayInputStream data = new ByteArrayInputStream(result);
             Segment news = readSegment(data);
             return encodeMessageSegment(news);
         } catch (IOException e) {
             e.printStackTrace();
         }
-        closeConnectionAnyWay();
+        closeConnectionAnyway();
         return null;
     }
 
@@ -357,7 +359,7 @@ public class SocketOfClientNode {
         byte[] result = readSecureData(socket.getInputStream());
         if (result == null)
             return null;
-        closeConnectionAnyWay();
+        closeConnectionAnyway();
         return new Segment("result", result, true);
     }
 
@@ -447,7 +449,7 @@ public class SocketOfClientNode {
     }
 
 
-    private void closeConnectionAnyWay() {
+    private void closeConnectionAnyway() {
         try {
             socket.close();
         } catch (IOException e) {
